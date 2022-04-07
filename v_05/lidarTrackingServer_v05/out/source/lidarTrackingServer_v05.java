@@ -65,7 +65,10 @@ ControlP5 cp5;
 int lidarPort1 = 8000;
 
 String connectPattern = "/server/connect";
-
+String serverIP = "localhost";
+NetAddress serverLocation; 
+int connectPort = 8000;
+String connectMessage = "/server/connect";
 
 int broadcastPort = 9000;
 OscP5 lidarFeed1;
@@ -111,6 +114,7 @@ JSONObject cVals;
 TrackPoly tZone = new TrackPoly();; 
 
 boolean createZone = false;
+boolean prevCreate = false;
 boolean createKP = false;
 boolean showRays = false;
 boolean showRawPoints = true;
@@ -190,6 +194,8 @@ for(int i=0;i<savedkeypoints.size();i++)
 }
 
 
+     
+connectClient(LOCAL_IP);
 }
 
 public void draw() 
@@ -266,7 +272,7 @@ public void keyPressed()
                
                tZone = new TrackPoly();
           }
-          println("TTTTTTTTTTTTTTTTTTTTTT");
+         // println("TTTTTTTTTTTTTTTTTTTTTT");
                createZone = !createZone;
           
      }
@@ -802,13 +808,14 @@ ssPoints.ldPoints.addAll(tempPoints);
             currentBlobs.clear();
             currentBlobs = checkPersistance(freshBlobs,prevBlobs,persistTolerance);
 
-            OscMessage blobData = new OscMessage("/trackdata/blobs");
+            OscMessage blobData = new OscMessage("/blobs");
             blobData.add(currentBlobs.size());
             for(TrackBlob tb : currentBlobs)
               {
               tb.display(displayscaleFactor,true,true,true,streamColor);
               //send the blob data
               blobData.add(tb.name);
+              blobData.add(tb.blobNumber);
               blobData.add((float)tb.center.getX());
               blobData.add((float)tb.center.getY());
               blobData.add((float)tb.boundingBox.getWidth());
@@ -899,7 +906,7 @@ return blobList;
  
 public void connect(ArrayList<KeyPoint> kp)
 {
-     OscMessage dsData = new OscMessage("/trackdata/distanceSensors");
+     OscMessage dsData = new OscMessage("/distanceSensors");
      dsData.add(displayscaleFactor); //0
      dsData.add(kp.size()); //1
      dsData.add(currentBlobs.size()); //2
@@ -928,10 +935,9 @@ public void connect(ArrayList<KeyPoint> kp)
               text(""+sDist+" @ "+angleTo,xp,yp);
 
               dsData.add(blob.name); //6
-              dsData.add((float)blob.center.getX()); //7
-              dsData.add((float)blob.center.getY()); //8
-              dsData.add(sDist); //9
-              dsData.add(angleTo); //10
+              dsData.add(blob.blobNumber);//7
+              dsData.add(sDist); //8
+              dsData.add(angleTo); //9
           }
      }
      lidarFeed1.send(dsData,broadcastList);

@@ -30,7 +30,10 @@ import processing.pdf.*;
 int lidarPort1 = 8000;
 
 String connectPattern = "/server/connect";
-
+String serverIP = "localhost";
+NetAddress serverLocation; 
+int connectPort = 8000;
+String connectMessage = "/server/connect";
 
 int broadcastPort = 9000;
 OscP5 lidarFeed1;
@@ -76,6 +79,7 @@ JSONObject cVals;
 TrackPoly tZone = new TrackPoly();; 
 
 boolean createZone = false;
+boolean prevCreate = false;
 boolean createKP = false;
 boolean showRays = false;
 boolean showRawPoints = true;
@@ -155,6 +159,8 @@ for(int i=0;i<savedkeypoints.size();i++)
 }
 
 
+     
+connectClient(LOCAL_IP);
 }
 
 void draw() 
@@ -231,7 +237,7 @@ void keyPressed()
                
                tZone = new TrackPoly();
           }
-          println("TTTTTTTTTTTTTTTTTTTTTT");
+         // println("TTTTTTTTTTTTTTTTTTTTTT");
                createZone = !createZone;
           
      }

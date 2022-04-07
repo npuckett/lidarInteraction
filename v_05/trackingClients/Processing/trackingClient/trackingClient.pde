@@ -23,14 +23,14 @@ int trackDataPort = 9000;
 
 
 //get this from the data server
-String serverIP = "172.17.135.107";
+String serverIP = "100.112.97.18";
 NetAddress serverLocation; 
 int connectPort = 8000;
 String connectMessage = "/server/connect";
 
 ///
-String blobDataFilter = "/trackdata/blobs";
-String distanceFilter = "/trackdata/distanceSensors";
+String blobDataFilter = "/blobs";
+String distanceFilter = "/distanceSensors";
 
 
 float displayScaleFactor = 0.17;
@@ -70,16 +70,20 @@ void draw()
   background(0);
 if(blobManager.population>0)
 {
-blobManager.show();
+//blobManager.show();
+ellipse(xp*displayScaleFactor,yp*displayScaleFactor,10,10);
+
+
+
+
+
+
+
+
+
 }
 
 
-if(totalSensors>0)
-{
-  drawSensors(displayScaleFactor);
-  
-  
-}
 
 
 }
@@ -104,15 +108,4 @@ void oscEvent(OscMessage incoming)
   //send the message to the datamanager
       blobManager.readNewData(incoming);
    
-
- 
-    if(incoming.addrPattern().equals(blobDataFilter))
-   {   
-  if(messageDebug)
-  {
-  //print debug data
-  println("### received an osc message with addrpattern "+incoming.addrPattern()+" and typetag "+incoming.typetag());
-  incoming.print();
-  }
-   }
 }

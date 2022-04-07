@@ -39,6 +39,10 @@ fillCount=0;
    {
      int dataPoints = 5;
      population = inData.get(0).intValue();
+     xp = inData.get(3).floatValue();
+     yp = inData.get(4).floatValue();
+     
+     
      currentWrite=find(0);
      PointSet newBlobs = activePoints.pts.get(find(0));
      newBlobs.blobs.clear();
@@ -46,19 +50,21 @@ fillCount=0;
        for(int i = 1;i<=population*dataPoints;i+=dataPoints)
        {
         fillCount++; 
-        newBlobs.blobs.add(new TrackBlob(inData.get(i).stringValue(), inData.get(i+1).floatValue(), inData.get(i+2).floatValue(), inData.get(i+3).floatValue(), inData.get(i+4).floatValue()));
+        newBlobs.blobs.add(new TrackBlob(inData.get(i).stringValue(), inData.get(i+2).floatValue(), inData.get(i+3).floatValue(), inData.get(i+4).floatValue(), inData.get(i+5).floatValue()));
         newBlobs.birthday=fillCount;        
        }
        
    }
    else if(inData.addrPattern().equals(distanceFilter))
    {
+     /*
      displayScaleFactor = inData.get(0).floatValue();
      xp = inData.get(4).floatValue();
      yp = inData.get(5).floatValue();
      distanceTo = inData.get(9).floatValue();
      angleTo = inData.get(10).floatValue();
      totalSensors = inData.get(1).intValue();
+     */
    }
 
    
