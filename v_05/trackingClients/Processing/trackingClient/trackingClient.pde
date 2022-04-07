@@ -11,19 +11,19 @@ import java.awt.geom.Rectangle2D;
 import java.awt.geom.Ellipse2D;
 import java.util.Collections;
 import java.util.*;
-
+import controlP5.*;
 
 Point2D testPt;
-
+ControlP5 cp5;
 boolean messageDebug = true;
 
 OscP5 trackDataFeed;
 int trackDataPort = 9000;
 
-
+boolean guiShow = true;
 
 //get this from the data server
-String serverIP = "100.112.97.18";
+String serverIP = "localhost";
 NetAddress serverLocation; 
 int connectPort = 8000;
 String connectMessage = "/server/connect";
@@ -48,6 +48,10 @@ float distanceTo =0;
 float angleTo= 0;
 int totalSensors = 0;
 
+
+int adjustX = 0;
+int adjustY = 0;
+
 void setup() 
 {
   size(1500,1500);
@@ -62,6 +66,30 @@ void setup()
   /* connect to the broadcaster */
      OscMessage serverControl = new OscMessage(connectMessage,new Object[0]);
       trackDataFeed.flush(serverControl,serverLocation);
+      
+      
+      cp5 = new ControlP5(this);
+      cp5.addSlider("displayScaleFactor")
+     .setPosition(10,10)
+     .setSize(300,30)
+     .setRange(0.00,0.5)
+     .setValue(0.25)
+     .setDecimalPrecision(2)
+     ; 
+      cp5.addSlider("adjustX")
+     .setPosition(10,40)
+     .setSize(300,30)
+     .setRange(-500,500)
+     .setValue(0)
+     .setDecimalPrecision(1)
+     ; 
+      cp5.addSlider("adjustY")
+     .setPosition(10,70)
+     .setSize(300,30)
+     .setRange(-500,500)
+     .setValue(0)
+     .setDecimalPrecision(1)
+     ;       
 }
 
 
@@ -70,34 +98,18 @@ void draw()
   background(0);
 if(blobManager.population>0)
 {
+float locationX = ((xp*displayScaleFactor)+adjustX);
+float locationY = ((yp*displayScaleFactor)+adjustY);
+  
+  
 //blobManager.show();
-ellipse(xp*displayScaleFactor,yp*displayScaleFactor,10,10);
-
-
-
-
-
-
-
-
-
+ellipse(locationX, locationY, 10,10);
 }
 
 
 
 
 }
-
-void drawSensors(float dsf)
-{
- fill(255,165,0);
- ellipse(xp*dsf,yp*dsf,20,20);
- textAlign(CENTER,CENTER);
- text("D: "+distanceTo+" A: "+angleTo,xp*dsf,(yp*dsf)+30);
-  
-  
-}
-
 
 
 
@@ -108,4 +120,20 @@ void oscEvent(OscMessage incoming)
   //send the message to the datamanager
       blobManager.readNewData(incoming);
    
+}
+
+void keyPressed()
+{
+  
+ guiShow = !guiShow;
+ 
+ if(guiShow)
+ {
+   cp5.show();
+ }
+ else
+ {
+  cp5.hide(); 
+ }
+  
 }
