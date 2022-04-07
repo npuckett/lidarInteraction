@@ -86,7 +86,7 @@ int adjustY = 0;
 
 void setup() 
 {
-  size(1280,800);
+  size(1920,1080);
 
   //osc feed of tracking data
   trackDataFeed = new OscP5(this,trackDataPort);
@@ -143,8 +143,8 @@ void draw()
   background(0);
 if(blobManager.population>0)
 {
-int locationX = round(((xp*displayScaleFactor)+adjustX));
-int locationY = round(((yp*displayScaleFactor)+adjustY));
+int locationX = round(xp+adjustX);
+int locationY = round(yp+adjustY);
   
   
 //blobManager.show();
