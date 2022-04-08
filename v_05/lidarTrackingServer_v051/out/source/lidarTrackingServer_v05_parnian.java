@@ -239,9 +239,15 @@ showIPinfo();
           }
           if(createWindow)
           {
-               stroke(0);
+               stroke(151,17,247); 
                noFill();
+               strokeWeight(40);
+               rect(0,0,width,height);
+               if(wPointCount>0)
+               {
+               strokeWeight(1);          
                rect(winX1,winY1,(mouseX-winX1),(((mouseX-winX1)*outSizeY)/outSizeX));
+               }
           }
           
           tZone.display(displayscaleFactor);
