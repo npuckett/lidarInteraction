@@ -41,6 +41,7 @@ Polygon trackArea;
     void sendPoints()
     {
         OscMessage trackArea = new OscMessage("/trackArea");
+        trackArea.add(pList.size());
         for(PolyPoint p : pList)
         {
           trackArea.add(p.worldX);

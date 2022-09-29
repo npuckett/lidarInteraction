@@ -187,17 +187,19 @@ ssPoints.ldPoints.addAll(tempPoints);
             currentBlobs = checkPersistance(freshBlobs,prevBlobs,persistTolerance);
 
             OscMessage blobData = new OscMessage("/blobs");
-            blobData.add(currentBlobs.size());
+            blobData.add(currentBlobs.size());  //0
             for(TrackBlob tb : currentBlobs)
               {
               tb.display(displayscaleFactor,true,true,true,streamColor);
               //send the blob data
-              blobData.add(tb.name);
-              blobData.add(tb.blobNumber);
-              blobData.add((float)tb.center.getX());
-              blobData.add((float)tb.center.getY());
-              blobData.add((float)tb.boundingBox.getWidth());
-              blobData.add((float)tb.boundingBox.getHeight());
+              blobData.add(tb.name);//1
+              blobData.add(tb.blobNumber);//2
+              blobData.add((float)tb.center.getX());//3
+              blobData.add((float)tb.center.getY());//4
+              blobData.add((float)tb.boundingBox.getWidth());//5
+              blobData.add((float)tb.boundingBox.getHeight());//6
+              blobData.add(tb.life);//7
+              blobData.add(tb.distanceTraveled);//8
 
               float pixelX = (float)tb.center.getX()*displayscaleFactor;
               float pixelY = (float)tb.center.getY()*displayscaleFactor;
@@ -209,8 +211,8 @@ ssPoints.ldPoints.addAll(tempPoints);
               
               float relX = map((pixelX-wpX1),0,(wpX2-wpX1),0,outSizeX);
               float relY = map((pixelY-wpY1),0,(wpY2-wpY1),0,outSizeY);
-              blobData.add(relX);
-              blobData.add(relY);
+              //blobData.add(relX);
+              //blobData.add(relY);
               
               //println(relX+"   "+relY);
               }

@@ -126,7 +126,7 @@ boolean createWindow = false;
 
 public void settings()
 {
-size(1300,1000,P2D);
+size(1800,2000,P2D);
 
 
 }
@@ -236,7 +236,7 @@ showIPinfo();
 
 if(menuToggle)
 {
-image(controlMenu,1100,0);
+image(controlMenu,width-200,0);
 
 }
 

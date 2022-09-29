@@ -120,7 +120,24 @@ float distance;
   }
 }
 
+public float roundTo(float thenumber, int decimalPlaces)
+{
+ 
+  String rString = nf(thenumber,0,decimalPlaces);
+ float rFloat = 0;
+  
+ 
 
+
+  try{
+    rFloat = Float.parseFloat(rString);
+    }catch(NumberFormatException exp)
+    {
+
+    }
+
+     return rFloat;
+}
 
 
 

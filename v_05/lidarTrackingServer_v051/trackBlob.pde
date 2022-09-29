@@ -80,8 +80,10 @@ fill(fColor);
     textSize(22);
     textAlign(CENTER,CENTER);
     text("X: "+(round((float)center.getX())+" | Y: "+round((float)center.getY())),(float)center.getX()*drawScale,((float)center.getY()*drawScale)-20);
-    textSize(18);
-    text(blobNumber+", "+name+"",(float)center.getX()*drawScale,((float)center.getY()*drawScale)+35);
+    textSize(40);
+    text(blobNumber+" / "+name,(float)center.getX()*drawScale,((float)center.getY()*drawScale)+0);
+    textSize(30);
+    text("active time: "+roundTo(life,1)+" / Metres: "+roundTo(distanceTraveled,2),(float)center.getX()*drawScale,((float)center.getY()*drawScale)+35);
     //text(distanceTraveled+" "+life+" "+velocity,(float)center.getX()*drawScale,((float)center.getY()*drawScale)+60);
 
 if(drawHistory)
@@ -115,7 +117,9 @@ float calcDistance(ArrayList<Point2D> allPoints)
     float totalDis = 0;
     for(int i=0;i<allPoints.size()-1;i++)
     {
-    totalDis+=(float)allPoints.get(i).distance(allPoints.get(i+1));
+    float checkDis = (float)allPoints.get(i).distance(allPoints.get(i+1));    
+    if(checkDis<30){checkDis=0;}
+    totalDis+=checkDis;
     }
 
 return totalDis;
