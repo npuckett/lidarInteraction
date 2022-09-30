@@ -82,7 +82,12 @@ JSONObject cVals;
 
 TrackPoly tZone = new TrackPoly();
 ArrayList<TrackPoly> iZones = new ArrayList<TrackPoly>();
-//TrackPoly iZone = new TrackPoly();
+ArrayList<SensorZone> sensorZones = new ArrayList<SensorZone>();
+
+boolean sensorZoneFirstPoint = true;
+boolean createSensorZone = false;
+int szNumber=0;
+
 boolean izFirstPoint = true;
 boolean createIgnore = false;
 boolean createZone = false;
@@ -116,7 +121,7 @@ static final String LOCAL_IP = findLanIp();
 
 
 PImage controlMenu;
-boolean menuToggle = true;
+boolean menuToggle = false;
 
 int outSizeX = 1920;
 int outSizeY = 1080;
@@ -213,6 +218,15 @@ showIPinfo();
                rect(0,0,width,height);
 
           }
+          if(createSensorZone)
+          {
+               stroke(0,0,255);
+               strokeWeight(40);
+               noFill();
+               rectMode(CORNER);
+               rect(0,0,width,height);
+
+          }
           if(createKP)
           {
                stroke(255,165,0);
@@ -242,6 +256,14 @@ showIPinfo();
           {
           iz.display(displayscaleFactor, color(255,0,0));
           }
+          for(SensorZone sz : sensorZones)     
+          {
+          sz.display(displayscaleFactor, color(0,0,255),color(0,0,255,50),lidarPoints1);
+          //sz.checkBlobs(lidarPoints1);
+          }
+
+
+
           for(KeyPoint pt : kps)
           {
                pt.display(displayscaleFactor);
@@ -297,6 +319,19 @@ void keyPressed()
                izFirstPoint = !izFirstPoint;
           
      }
+     if(key=='z')
+     {
+          if(!createSensorZone&&sensorZoneFirstPoint)
+          {
+               sensorZones.add(new SensorZone(szNumber));
+               szNumber++;
+              // iZone = new TrackPoly();
+          }
+         // println("TTTTTTTTTTTTTTTTTTTTTT");
+               createSensorZone = !createSensorZone;
+               sensorZoneFirstPoint = !sensorZoneFirstPoint;
+          
+     }
      if(key=='r')
      {
           showRays = !showRays;
@@ -324,6 +359,7 @@ void keyPressed()
      tZone.trackArea = new Polygon();
      saveCalibration();
      sensorCount=0;
+     iZones.clear();
      }
      if(key=='k')
      {
@@ -390,6 +426,8 @@ void saveCalibration()
      }
      saveJSONArray(kPoints, "data/keypoints.json");
 
+  
+
 }
 
 void mousePressed()
@@ -404,6 +442,10 @@ if(mouseButton == LEFT)
      if(createIgnore)
      {
      iZones.get(iZones.size()-1).addPoint(mouseX,mouseY,displayscaleFactor);
+     }
+     if(createSensorZone)
+     {
+     sensorZones.get(sensorZones.size()-1).addPoint(mouseX,mouseY,displayscaleFactor);
      }
 
      if(createKP)
