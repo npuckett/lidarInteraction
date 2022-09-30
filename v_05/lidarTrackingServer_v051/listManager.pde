@@ -182,7 +182,7 @@ ssPoints.ldPoints.addAll(tempPoints);
 
           if(showBlobs)
           {
-            ArrayList<TrackBlob> freshBlobs = sortToBlobs(freshPoints.ldPoints,trackPointJoinDis,tZone.trackArea);
+            ArrayList<TrackBlob> freshBlobs = sortToBlobs(freshPoints.ldPoints,trackPointJoinDis,tZone.trackArea,iZones);
             currentBlobs.clear();
             currentBlobs = checkPersistance(freshBlobs,prevBlobs,persistTolerance);
 
@@ -227,15 +227,27 @@ ssPoints.ldPoints.addAll(tempPoints);
         }
       }
 
-    ArrayList<TrackBlob> sortToBlobs(ArrayList<LidarPoint> rawPts, float jTolerance, Polygon testArea)
+    ArrayList<TrackBlob> sortToBlobs(ArrayList<LidarPoint> rawPts, float jTolerance, Polygon testArea, ArrayList<TrackPoly> igZones)
     {
     ArrayList<LidarPoint> bgFilteredPts = new ArrayList<LidarPoint>();
 
     for(LidarPoint testPt : rawPts)
       {
-        if(testArea.contains(testPt.world))
+        boolean ignorePoint = false;
+        if(testArea.contains(testPt.world))   //&& (!ignoreZones.contains(testPt.world)))
         {
+          for(int i =0;i<igZones.size();i++)
+          {
+            if(igZones.get(i).trackArea.contains(testPt.world))
+            {
+              ignorePoint=true;
+            }
+          }
+
+          if(!ignorePoint)
+          {
           bgFilteredPts.add(testPt);
+          }
         }
 
       }

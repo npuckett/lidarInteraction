@@ -115,8 +115,11 @@ boolean buffersReady = false;
 
 JSONObject cVals;
 
-TrackPoly tZone = new TrackPoly();; 
-
+TrackPoly tZone = new TrackPoly();
+ArrayList<TrackPoly> iZones = new ArrayList<TrackPoly>();
+//TrackPoly iZone = new TrackPoly();
+boolean izFirstPoint = true;
+boolean createIgnore = false;
 boolean createZone = false;
 boolean prevCreate = false;
 boolean createKP = false;
@@ -218,11 +221,27 @@ connectClient(LOCAL_IP);
 
         
 
-background(255);     
+background(255);   
+
+if(menuToggle)
+{
+image(controlMenu,width-200,0);
+
+}
+
 showIPinfo();          
           if(createZone)
           {
                stroke(0,255,0);
+               strokeWeight(40);
+               noFill();
+               rectMode(CORNER);
+               rect(0,0,width,height);
+
+          }
+          if(createIgnore)
+          {
+               stroke(255,0,0);
                strokeWeight(40);
                noFill();
                rectMode(CORNER);
@@ -251,9 +270,13 @@ showIPinfo();
                }
           }
           
-          tZone.display(displayscaleFactor);
+          tZone.display(displayscaleFactor, color(0,255,0));
           tZone.sendPoints();
 
+          for(TrackPoly iz : iZones)     
+          {
+          iz.display(displayscaleFactor, color(255,0,0));
+          }
           for(KeyPoint pt : kps)
           {
                pt.display(displayscaleFactor);
@@ -269,11 +292,7 @@ showIPinfo();
               
              
 
-if(menuToggle)
-{
-image(controlMenu,width-200,0);
 
-}
 
 
 
@@ -299,6 +318,18 @@ image(controlMenu,width-200,0);
           }
          // println("TTTTTTTTTTTTTTTTTTTTTT");
                createZone = !createZone;
+          
+     }
+     if(key=='i')
+     {
+          if(!createIgnore&&izFirstPoint)
+          {
+               iZones.add(new TrackPoly());
+              // iZone = new TrackPoly();
+          }
+         // println("TTTTTTTTTTTTTTTTTTTTTT");
+               createIgnore = !createIgnore;
+               izFirstPoint = !izFirstPoint;
           
      }
      if(key=='r')
@@ -404,6 +435,10 @@ if(mouseButton == LEFT)
      if(createZone)
      {
      tZone.addPoint(mouseX,mouseY,displayscaleFactor);
+     }
+     if(createIgnore)
+     {
+     iZones.get(iZones.size()-1).addPoint(mouseX,mouseY,displayscaleFactor);
      }
 
      if(createKP)
@@ -858,7 +893,7 @@ ssPoints.ldPoints.addAll(tempPoints);
 
           if(showBlobs)
           {
-            ArrayList<TrackBlob> freshBlobs = sortToBlobs(freshPoints.ldPoints,trackPointJoinDis,tZone.trackArea);
+            ArrayList<TrackBlob> freshBlobs = sortToBlobs(freshPoints.ldPoints,trackPointJoinDis,tZone.trackArea,iZones);
             currentBlobs.clear();
             currentBlobs = checkPersistance(freshBlobs,prevBlobs,persistTolerance);
 
@@ -903,15 +938,27 @@ ssPoints.ldPoints.addAll(tempPoints);
         }
       }
 
-     public ArrayList<TrackBlob> sortToBlobs(ArrayList<LidarPoint> rawPts, float jTolerance, Polygon testArea)
+     public ArrayList<TrackBlob> sortToBlobs(ArrayList<LidarPoint> rawPts, float jTolerance, Polygon testArea, ArrayList<TrackPoly> igZones)
     {
     ArrayList<LidarPoint> bgFilteredPts = new ArrayList<LidarPoint>();
 
     for(LidarPoint testPt : rawPts)
       {
-        if(testArea.contains(testPt.world))
+        boolean ignorePoint = false;
+        if(testArea.contains(testPt.world))   //&& (!ignoreZones.contains(testPt.world)))
         {
+          for(int i =0;i<igZones.size();i++)
+          {
+            if(igZones.get(i).trackArea.contains(testPt.world))
+            {
+              ignorePoint=true;
+            }
+          }
+
+          if(!ignorePoint)
+          {
           bgFilteredPts.add(testPt);
+          }
         }
 
       }
@@ -1532,13 +1579,14 @@ Polygon trackArea;
         trackArea.addPoint(x,y);
 
     }
-     public void display(float drawScale)
+     public void display(float drawScale, int polyColor)
     {
         strokeWeight(1);
-        fill(0,255,0);
+        fill(polyColor);
+       
         PShape trackPoly = createShape();
         trackPoly.beginShape();
-        trackPoly.stroke(0,255,0);
+        trackPoly.stroke(polyColor);
         trackPoly.strokeWeight(2);
         trackPoly.noFill();
         for(PolyPoint p : pList)

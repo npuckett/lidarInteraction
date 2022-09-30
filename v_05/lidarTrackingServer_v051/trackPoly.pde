@@ -20,13 +20,14 @@ Polygon trackArea;
         trackArea.addPoint(x,y);
 
     }
-    void display(float drawScale)
+    void display(float drawScale, color polyColor)
     {
         strokeWeight(1);
-        fill(0,255,0);
+        fill(polyColor);
+       
         PShape trackPoly = createShape();
         trackPoly.beginShape();
-        trackPoly.stroke(0,255,0);
+        trackPoly.stroke(polyColor);
         trackPoly.strokeWeight(2);
         trackPoly.noFill();
         for(PolyPoint p : pList)
