@@ -88,6 +88,11 @@ boolean sensorZoneFirstPoint = true;
 boolean createSensorZone = false;
 int szNumber=0;
 
+int outWinX;
+int outWinY;
+
+TrackWindow sendWindow = new TrackWindow(0,0);
+
 boolean izFirstPoint = true;
 boolean createIgnore = false;
 boolean createZone = false;
@@ -180,6 +185,48 @@ for(int i=0;i<savedkeypoints.size();i++)
 }
 
 
+JSONArray savedSensorZones = loadJSONArray("szPoints.json");
+for(int i=0;i<savedSensorZones.size();i++)
+{
+     JSONArray singleZone = savedSensorZones.getJSONArray(i);
+     sensorZones.add(new SensorZone(i));     
+     for(int j=0;j<singleZone.size();j++)
+     {
+       JSONObject points = singleZone.getJSONObject(j);   
+       sensorZones.get(i).addSavedPoint(points.getInt("x"),points.getInt("y"));   
+          
+     }
+     
+szNumber++;
+}
+
+JSONArray savedMasks = loadJSONArray("maskPoints.json");
+for(int i=0;i<savedMasks.size();i++)
+{
+     JSONArray singleZone = savedMasks.getJSONArray(i);
+     iZones.add(new TrackPoly());     
+     for(int j=0;j<singleZone.size();j++)
+     {
+       JSONObject points = singleZone.getJSONObject(j);   
+       iZones.get(i).addSavedPoint(points.getInt("x"),points.getInt("y"));   
+          
+     }
+     
+}
+JSONArray savedWindow = loadJSONArray("windowpoints.json");
+JSONObject res = savedWindow.getJSONObject(savedWindow.size()-1);
+
+sendWindow = new TrackWindow(res.getInt("resX"),res.getInt("resY"));
+for(int i=0;i<savedWindow.size()-1;i++)
+{
+  JSONObject pt = savedWindow.getJSONObject(i);
+  sendWindow.addSavedPoint(pt.getInt("x"),pt.getInt("y"));
+}
+
+
+
+
+
      
 connectClient(LOCAL_IP);
 }
@@ -245,7 +292,7 @@ showIPinfo();
                if(wPointCount>0)
                {
                strokeWeight(1);          
-               rect(winX1,winY1,(mouseX-winX1),(((mouseX-winX1)*outSizeY)/outSizeX));
+               rect(winX1,winY1,(mouseX-winX1),(((mouseX-winX1)*outWinY)/outWinX));
                }
           }
           
@@ -276,9 +323,11 @@ showIPinfo();
                lidarPoints1.connect(kps);
           }
   
-              
-             
-
+          if(sendWindow.pList.size()>0)
+          {    
+          sendWindow.display(displayscaleFactor, color(151,17,247),lidarPoints1); 
+          sendWindow.sendPoints();  
+          }
 
 
 
@@ -305,9 +354,10 @@ void keyPressed()
           }
          // println("TTTTTTTTTTTTTTTTTTTTTT");
                createZone = !createZone;
+               saveCalibration();
           
      }
-     if(key=='i')
+     if(key=='m')
      {
           if(!createIgnore&&izFirstPoint)
           {
@@ -317,7 +367,17 @@ void keyPressed()
          // println("TTTTTTTTTTTTTTTTTTTTTT");
                createIgnore = !createIgnore;
                izFirstPoint = !izFirstPoint;
+               saveCalibration();
           
+     }
+     if(key=='M')
+     {
+          if(iZones.size()>0)
+          {
+            iZones.remove(iZones.size()-1);
+               saveCalibration();
+
+          }
      }
      if(key=='z')
      {
@@ -330,8 +390,20 @@ void keyPressed()
          // println("TTTTTTTTTTTTTTTTTTTTTT");
                createSensorZone = !createSensorZone;
                sensorZoneFirstPoint = !sensorZoneFirstPoint;
+               saveCalibration();
           
      }
+     if(key=='Z')
+     {
+         if(sensorZones.size()>0)
+         { 
+         sensorZones.remove(sensorZones.size()-1);
+         szNumber--;
+         saveCalibration();
+         }     
+      
+          
+     }     
      if(key=='r')
      {
           showRays = !showRays;
@@ -357,9 +429,13 @@ void keyPressed()
      kps.clear();
      tZone.pList.clear();
      tZone.trackArea = new Polygon();
-     saveCalibration();
+     
      sensorCount=0;
      iZones.clear();
+
+     sensorZones.clear();
+     szNumber = 0;
+     saveCalibration();
      }
      if(key=='k')
      {
@@ -380,6 +456,11 @@ void keyPressed()
           {
                wPointCount=0;
           }
+     }
+     if(key=='W')
+     {
+         sendWindow = new TrackWindow(0,0);
+         saveCalibration();
      }
 }
 
@@ -413,14 +494,15 @@ void saveCalibration()
      }
      saveJSONArray(polyPoints, "data/polypoints.json");
 
-     JSONArray allSenseZones = new JSONArray();
 
+
+     JSONArray allSenseZones = new JSONArray();
      for(int i=0;i<sensorZones.size();i++)
      {
 
      polyPoints = new JSONArray();
      arrayIndex = 0;
-     for(PolyPoint pt : sensorZones.get(0).pList)
+     for(PolyPoint pt : sensorZones.get(i).pList)
      {
       JSONObject pointData = new JSONObject();
       pointData.setInt("x",pt.worldX);
@@ -432,40 +514,23 @@ void saveCalibration()
      }
      saveJSONArray(allSenseZones, "data/szPoints.json");
 
-
-
-
-
-
-
-
-
-
-/*
-     JSONArray allZones = new JSONArray();
-     int zoneIndex = 0;
-     for(SensorZone sz : sensorZones)
+     JSONArray allMaskZones = new JSONArray();
+     for(int i=0;i<iZones.size();i++)
      {
-     JSONArray singleZone = new JSONArray();
-     int singleZoneIndex = 0;
-          for(PolyPoint pt : sz.pList)
-          {
-          JSONObject pointData = new JSONObject();
-          pointData.setInt("x",pt.worldX);
-          pointData.setInt("y",pt.worldY);
-          polyPoints.setJSONObject(singleZoneIndex,pointData);
-          singleZoneIndex++;
-          }
-     allZones.setJSONArray(zoneIndex,singleZone);  
-     zoneIndex++;   
+
+     polyPoints = new JSONArray();
+     arrayIndex = 0;
+     for(PolyPoint pt : iZones.get(i).pList)
+     {
+      JSONObject pointData = new JSONObject();
+      pointData.setInt("x",pt.worldX);
+      pointData.setInt("y",pt.worldY);
+      polyPoints.setJSONObject(arrayIndex,pointData);
+      arrayIndex++;
      }
-     saveJSONArray(allZones, "data/szPoints.json");
-
-*/
-
-
-
-
+     allMaskZones.setJSONArray(i,polyPoints);
+     }
+     saveJSONArray(allMaskZones, "data/maskPoints.json");
 
 
 
@@ -481,6 +546,23 @@ void saveCalibration()
       arrayIndex++;
      }
      saveJSONArray(kPoints, "data/keypoints.json");
+
+
+     JSONArray windowPoints = new JSONArray();
+     arrayIndex = 0;
+     for(PolyPoint pt : sendWindow.pList)
+     {
+      JSONObject pointData = new JSONObject();
+      pointData.setInt("x",pt.worldX);
+      pointData.setInt("y",pt.worldY);
+      windowPoints.setJSONObject(arrayIndex,pointData);
+      arrayIndex++;
+     }
+     JSONObject resData = new JSONObject();
+     resData.setInt("resX",sendWindow.resolutionX);
+     resData.setInt("resY",sendWindow.resolutionY);
+     windowPoints.setJSONObject(arrayIndex,resData);
+     saveJSONArray(windowPoints, "data/windowpoints.json");
 
   
 
@@ -520,14 +602,17 @@ if(mouseButton == LEFT)
           }
           else 
           {
-               tZone.pList.clear();
-               tZone.trackArea = new Polygon();
-               tZone.addPoint(round(winX1),round(winY1),displayscaleFactor);
-               tZone.addPoint(mouseX,round(winY1),displayscaleFactor); 
-               tZone.addPoint(mouseX,round(winY1+(((mouseX-winX1)*outSizeY)/outSizeX)),displayscaleFactor); 
-               tZone.addPoint(round(winX1),round(winY1+(((mouseX-winX1)*outSizeY)/outSizeX)),displayscaleFactor); 
+               sendWindow = new TrackWindow(outWinX,outWinY);
+
+
+               
+               sendWindow.addPoint(round(winX1),round(winY1),displayscaleFactor);
+               sendWindow.addPoint(mouseX,round(winY1),displayscaleFactor); 
+               sendWindow.addPoint(mouseX,round(winY1+(((mouseX-winX1)*outWinY)/outWinX)),displayscaleFactor); 
+               sendWindow.addPoint(round(winX1),round(winY1+(((mouseX-winX1)*outWinY)/outWinX)),displayscaleFactor); 
                createWindow=false;
-               wPointCount=0;  
+               wPointCount=0; 
+               saveCalibration(); 
           }
      }
 }
@@ -543,11 +628,11 @@ cp5 = new ControlP5(this);
 cp5.setFont(font);
 Group calibration = cp5.addGroup("calibration")
                .setPosition(0,slPos)
-                .activateEvent(true)
+                .activateEvent(false)
                 .setBarHeight(130)
                 .setBackgroundColor(color(0,0,0,80))
                 .setWidth(sx+300)
-                .setBackgroundHeight(225)
+                .setBackgroundHeight(300)
                 .setLabel("calibration")
                 ;
 
@@ -604,6 +689,22 @@ cp5.addSlider("l1Rot")
      .setSize(sx,slSpacing-1)
      .setRange(-360,360)
      .setValue(cVals.getFloat("l1Rot"))
+     .setDecimalPrecision(1)
+     .setGroup(calibration)
+     ;
+cp5.addSlider("outWinX")
+     .setPosition(10,slPos+=slSpacing)
+     .setSize(sx,slSpacing-1)
+     .setRange(0,4000)
+     .setValue(1920)
+     .setDecimalPrecision(1)
+     .setGroup(calibration)
+     ;
+cp5.addSlider("outWinY")
+     .setPosition(10,slPos+=slSpacing)
+     .setSize(sx,slSpacing-1)
+     .setRange(0,4000)
+     .setValue(1080)
      .setDecimalPrecision(1)
      .setGroup(calibration)
      ;

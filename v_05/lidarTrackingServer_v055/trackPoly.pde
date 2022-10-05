@@ -100,7 +100,7 @@ IntList currentMembers = new IntList();
         {
             if(trackArea.intersects(cb.boundingBox))
             {
-                println("hit :"+cb.name);
+                //println("hit :"+cb.name);
                 tempCount++;
                 hitAny=true;
                 currentMembers.append(cb.blobNumber);
@@ -179,7 +179,86 @@ IntList currentMembers = new IntList();
 }
 
 
+class TrackWindow
+{
+ArrayList<PolyPoint> pList = new ArrayList<PolyPoint>();
+Polygon trackArea;
+int resolutionX;
+int resolutionY;
 
+ArrayList<TrackBlob> insideBlobs = new ArrayList<TrackBlob>();
+
+    TrackWindow(int inResX, int inResY)
+    {
+        trackArea = new Polygon();
+        resolutionX = inResX;
+        resolutionY = inResY;
+    }
+
+    void addPoint(int pointX, int pointY, float sf)
+    {
+        int x = round(pointX/sf);
+        int y = round(pointY/sf);    
+        pList.add(new PolyPoint(x,y));
+        trackArea.addPoint(x,y);
+    }
+    void addSavedPoint(int x, int y)
+    {
+        pList.add(new PolyPoint(x,y));
+        trackArea.addPoint(x,y);
+
+    }
+    void display(float drawScale, color polyColor, PointStream ps)
+    {
+        ArrayList<TrackBlob> checkBlobs = ps.currentBlobs;
+        insideBlobs.clear(); 
+        for(TrackBlob cb : checkBlobs)
+        {
+            if(trackArea.contains(cb.center))
+            {
+               
+            insideBlobs.add(cb);
+            }
+        }
+        
+        
+        strokeWeight(1);
+        fill(polyColor);
+       
+        PShape trackPoly = createShape();
+        trackPoly.beginShape();
+        trackPoly.stroke(polyColor);
+        trackPoly.strokeWeight(2);
+        trackPoly.noFill();
+        for(PolyPoint p : pList)
+        {
+            ellipse(p.worldX*drawScale,p.worldY*drawScale,10,10);
+            trackPoly.vertex(p.worldX*drawScale,p.worldY*drawScale);
+        }
+        trackPoly.endShape(CLOSE);
+        shape(trackPoly,0,0);
+
+    }
+    void sendPoints()
+    {
+        OscMessage trackWindowM = new OscMessage("/trackWindow");
+        trackWindowM.add(insideBlobs.size());
+        for(TrackBlob tb : insideBlobs)
+        {
+         int relX = round(map(((float)tb.center.getX()-pList.get(0).worldX),0,(pList.get(1).worldX-pList.get(0).worldX),0,resolutionX));   
+         int relY = round(map(((float)tb.center.getY()-pList.get(0).worldY),0,(pList.get(3).worldY-pList.get(0).worldY),0,resolutionY));
+        trackWindowM.add(relX);
+        trackWindowM.add(relY);
+        println(relX+"\t"+relY);
+        }
+
+    lidarFeed1.send(trackWindowM,broadcastList);
+
+    }
+
+
+
+}
 
 
 
