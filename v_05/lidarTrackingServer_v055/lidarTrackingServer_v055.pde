@@ -58,6 +58,8 @@ PrintWriter writeFile;
 float trackPointJoinDis = 100.0;
 int maxTrackPoints = 60;
 float persistTolerance = 60.0;
+int minimumBlobPoints = 3;
+int maxBlobPoints = 100;
 
 int clipPlane = 5000;
 int l1x = 10000;

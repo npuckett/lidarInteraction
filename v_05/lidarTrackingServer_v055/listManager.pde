@@ -182,7 +182,7 @@ ssPoints.ldPoints.addAll(tempPoints);
 
           if(showBlobs)
           {
-            ArrayList<TrackBlob> freshBlobs = sortToBlobs(freshPoints.ldPoints,trackPointJoinDis,tZone.trackArea,iZones);
+            ArrayList<TrackBlob> freshBlobs = sortToBlobs(freshPoints.ldPoints,trackPointJoinDis,tZone.trackArea,iZones,maxBlobPoints);
             currentBlobs.clear();
             currentBlobs = checkPersistance(freshBlobs,prevBlobs,persistTolerance);
 
@@ -227,77 +227,84 @@ ssPoints.ldPoints.addAll(tempPoints);
         }
       }
 
-    ArrayList<TrackBlob> sortToBlobs(ArrayList<LidarPoint> rawPts, float jTolerance, Polygon testArea, ArrayList<TrackPoly> igZones)
-    {
+    ArrayList<TrackBlob> sortToBlobs(ArrayList<LidarPoint> rawPts, float jTolerance, Polygon testArea, ArrayList<TrackPoly> igZones, int maxPointsPerBlob) {
     ArrayList<LidarPoint> bgFilteredPts = new ArrayList<LidarPoint>();
 
-    for(LidarPoint testPt : rawPts)
-      {
+    // Iterate through raw LIDAR points
+    for (LidarPoint testPt : rawPts) {
         boolean ignorePoint = false;
-        if(testArea.contains(testPt.world))   //&& (!ignoreZones.contains(testPt.world)))
-        {
-          for(int i =0;i<igZones.size();i++)
-          {
-            if(igZones.get(i).trackArea.contains(testPt.world))
-            {
-              ignorePoint=true;
+
+        // Check if the point is within the tracking area
+        if (testArea.contains(testPt.world)) {
+            // Check if the point is within any of the ignore zones
+            for (TrackPoly igZone : igZones) {
+                if (igZone.trackArea.contains(testPt.world)) {
+                    ignorePoint = true;
+                    break;
+                }
             }
-          }
 
-          if(!ignorePoint)
-          {
-          bgFilteredPts.add(testPt);
-          }
+            // If the point should be ignored, skip the rest of the current iteration
+            if (ignorePoint) {
+                continue;
+            }
+
+            // Add the point to the filtered points list if it passes the checks
+            bgFilteredPts.add(testPt);
         }
-
-      }
-
-      ArrayList<TrackBlob> blobList = new ArrayList<TrackBlob>();
-      boolean currentlyAdding = false;
-      boolean prevState = false;
-      for (int i = 0; i<(bgFilteredPts.size()-1); i++)
-      {
-        double testDist = bgFilteredPts.get(i).world.distance(bgFilteredPts.get(i+1).world);
-        
-        if((float)testDist<=jTolerance)
-          {
-          if(currentlyAdding==false)   /////this is where to add the max points filter
-          {
-            blobList.add(new TrackBlob());
-            blobList.get(blobList.size()-1).addPoint(bgFilteredPts.get(i));
-            currentlyAdding=true;
-          }
-          blobList.get(blobList.size()-1).addPoint(bgFilteredPts.get(i+1));    
-        }
-        else
-        {
-          currentlyAdding=false;
-        }
-
-      }
-
-
-    if(blobList.size()>1)
-    {
-    int lastBlob = blobList.size()-1;
-    int lastPoint = blobList.get(lastBlob).blobPoints.size()-1;  
-
-    double edgeDistance = blobList.get(lastBlob).blobPoints.get(lastPoint).world.distance(blobList.get(0).blobPoints.get(0).world);
-
-      if((float)edgeDistance<=jTolerance)
-      {
-        for(LidarPoint ep : blobList.get(0).blobPoints)
-        {
-          blobList.get(lastBlob).addPoint(ep);
-        }
-        blobList.remove(0);
-
-      }
     }
 
+    ArrayList<TrackBlob> blobList = new ArrayList<TrackBlob>();
+    boolean currentlyAdding = false;
+
+    // Iterate through the filtered points
+    for (int i = 0; i < (bgFilteredPts.size() - 1); i++) {
+        // Calculate the distance between the current point and the next point
+        double testDist = bgFilteredPts.get(i).world.distance(bgFilteredPts.get(i + 1).world);
+
+        // Check if the distance is less than or equal to the tolerance
+        if ((float) testDist <= jTolerance) {
+            // Add a new blob if not currently adding or if the current blob is full
+            if (!currentlyAdding || blobList.get(blobList.size() - 1).totalPoints >= maxPointsPerBlob) {
+                blobList.add(new TrackBlob());
+                blobList.get(blobList.size() - 1).addPoint(bgFilteredPts.get(i));
+                currentlyAdding = true;
+            }
+            // Add the next point to the current blob
+            blobList.get(blobList.size() - 1).addPoint(bgFilteredPts.get(i + 1));
+        } else {
+            // Set currentlyAdding to false if the distance is greater than the tolerance
+            currentlyAdding = false;
+        }
+    }
+
+
+// Check if there is more than one blob in the list
+if (blobList.size() > 1) {
+    // Get the index of the last blob in the list
+    int lastBlob = blobList.size() - 1;
+    // Get the index of the last point in the last blob
+    int lastPoint = blobList.get(lastBlob).blobPoints.size() - 1;
+
+    // Calculate the distance between the last point of the last blob and the first point of the first blob
+    double edgeDistance = blobList.get(lastBlob).blobPoints.get(lastPoint).world.distance(blobList.get(0).blobPoints.get(0).world);
+
+    // Check if the distance is less than or equal to the tolerance
+    if ((float) edgeDistance <= jTolerance) {
+        // If the distance is within tolerance, merge the first blob into the last blob
+        for (LidarPoint ep : blobList.get(0).blobPoints) {
+            blobList.get(lastBlob).addPoint(ep);
+        }
+        // Remove the first blob from the list after merging
+        blobList.remove(0);
+    }
+}
+
+
+    //remove blobs with too few points
     for(int i=0;i<blobList.size();i++)
     {
-      if(blobList.get(i).totalPoints<=2)
+      if(blobList.get(i).totalPoints<=minimumBlobPoints)
       {
         blobList.remove(i);
       }
@@ -394,4 +401,74 @@ DrawBuffer(int bSize)
 }
 
 
+}
+
+
+
+ArrayList<TrackBlob> checkPersistance(ArrayList<TrackBlob> newBlobs, ArrayList<TrackBlob> oldBlobs, float minDistance)
+{
+//https://github.com/jorditost/BlobPersistence/blob/master/WhichFace/WhichFace.pde
+
+  //measure distance from new blobs to all previous ones
+  for(int nb=0;nb<newBlobs.size();nb++)
+  {
+  //make a list
+  MeasureManager closestBlob = new MeasureManager();
+
+    for(int ob = 0;ob<oldBlobs.size();ob++)
+    {
+      double measure = newBlobs.get(nb).center.distance(oldBlobs.get(ob).center);
+      if((float)measure<closestBlob.distance)
+      {
+        closestBlob.index = ob;
+        closestBlob.distance = (float)measure;
+      }
+    }
+    //println(closestBlob.distance);
+    ///see if the closest old blob is close enough to count
+    if(closestBlob.distance<=minDistance)
+    {
+      newBlobs.get(nb).update(oldBlobs.get(closestBlob.index)); 
+    }
+    else
+    {
+      //give it a number
+      
+      newBlobs.get(nb).assignID();
+
+     
+    }
+
+
+  }
+
+return newBlobs;
+}
+class MeasureManager
+{
+int index;
+float distance;
+  MeasureManager()
+  {
+    distance=99999;
+  }
+}
+
+public float roundTo(float thenumber, int decimalPlaces)
+{
+ 
+  String rString = nf(thenumber,0,decimalPlaces);
+ float rFloat = 0;
+  
+ 
+
+
+  try{
+    rFloat = Float.parseFloat(rString);
+    }catch(NumberFormatException exp)
+    {
+
+    }
+
+     return rFloat;
 }

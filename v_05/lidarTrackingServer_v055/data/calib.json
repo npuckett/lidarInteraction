@@ -1,10 +1,10 @@
 {
-  "clipPlane": 18475,
-  "l1x": 3075,
+  "clipPlane": 6074,
+  "l1x": 2175,
   "l2y": 10000,
   "l2x": 10000,
-  "l1y": 2831,
+  "l1y": 2137,
   "l2Rot": 0,
   "l1Rot": 0.89996337890625,
-  "displayscaleFactor": 0.2718749940395355
+  "displayscaleFactor": 0.4556249976158142
 }
