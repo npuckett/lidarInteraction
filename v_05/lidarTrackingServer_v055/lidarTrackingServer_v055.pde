@@ -58,7 +58,7 @@ PrintWriter writeFile;
 float trackPointJoinDis = 100.0;
 int maxTrackPoints = 60;
 float persistTolerance = 60.0;
-int minimumBlobPoints = 3;
+int minBlobPoints = 3;
 int maxBlobPoints = 100;
 
 int clipPlane = 5000;
@@ -142,7 +142,7 @@ boolean createWindow = false;
 public void settings()
 {
 size(1800,2000,P2D);
-
+//windowResizable(true);
 
 }
 
@@ -235,101 +235,74 @@ connectClient(LOCAL_IP);
 
 void draw() 
 {
- 
-//boolean updateCheck = checkRefresh(lastFrame);
+background(255);
 
-        
+  if (menuToggle) {
+    image(controlMenu, width - 200, 0);
+  }
 
-background(255);   
+  showIPinfo();
 
-if(menuToggle)
-{
-image(controlMenu,width-200,0);
+  if (createZone || createIgnore || createSensorZone || createKP || createWindow) {
+    
 
-}
+    String modeText = "";
+    color modeColor = color(0);
 
-showIPinfo();          
-          if(createZone)
-          {
-               stroke(0,255,0);
-               strokeWeight(40);
-               noFill();
-               rectMode(CORNER);
-               rect(0,0,width,height);
+    if (createZone) {
+      modeText = "Create Zone";
+      modeColor = color(0, 255, 0);
+    } else if (createIgnore) {
+      modeText = "Create Ignore Zone";
+      modeColor = color(255, 0, 0);
+    } else if (createSensorZone) {
+      modeText = "Create Sensor Zone";
+      modeColor = color(0, 0, 255);
+    } else if (createKP) {
+      modeText = "Create Key Point";
+      modeColor = color(255, 165, 0);
+    } else if (createWindow) {
+      modeText = "Create Window";
+      modeColor = color(151, 17, 247);
+    }
 
-          }
-          if(createIgnore)
-          {
-               stroke(255,0,0);
-               strokeWeight(40);
-               noFill();
-               rectMode(CORNER);
-               rect(0,0,width,height);
+    stroke(modeColor);
+    strokeWeight(50);
+    noFill();
+    rectMode(CORNER);
+    rect(0, 0, width, height);
+    text(modeText, width / 2, height / 2);
+  }
 
-          }
-          if(createSensorZone)
-          {
-               stroke(0,0,255);
-               strokeWeight(40);
-               noFill();
-               rectMode(CORNER);
-               rect(0,0,width,height);
+  tZone.display(displayscaleFactor, color(0, 255, 0));
+  tZone.sendPoints();
 
-          }
-          if(createKP)
-          {
-               stroke(255,165,0);
-               strokeWeight(40);
-               noFill();
-               rectMode(CORNER);
-               rect(0,0,width,height);
+  int redColor = color(255, 0, 0);
+  for (TrackPoly iz : iZones) {
+    iz.display(displayscaleFactor, redColor);
+  }
 
-          }
-          if(createWindow)
-          {
-               stroke(151,17,247); 
-               noFill();
-               strokeWeight(40);
-               rect(0,0,width,height);
-               if(wPointCount>0)
-               {
-               strokeWeight(1);          
-               rect(winX1,winY1,(mouseX-winX1),(((mouseX-winX1)*outWinY)/outWinX));
-               }
-          }
-          
-          tZone.display(displayscaleFactor, color(0,255,0));
-          tZone.sendPoints();
+  int blueColor = color(0, 0, 255);
+  int blueTransparent = color(0, 0, 255, 50);
+  for (SensorZone sz : sensorZones) {
+    sz.display(displayscaleFactor, blueColor, blueTransparent, lidarPoints1);
+  }
 
-          for(TrackPoly iz : iZones)     
-          {
-          iz.display(displayscaleFactor, color(255,0,0));
-          }
-          for(SensorZone sz : sensorZones)     
-          {
-          sz.display(displayscaleFactor, color(0,0,255),color(0,0,255,50),lidarPoints1);
-          //sz.checkBlobs(lidarPoints1);
-          }
+  for (KeyPoint pt : kps) {
+    pt.display(displayscaleFactor);
+  }
 
+  if (lidarPoints1.available) {
+    lidarPoints1.show();
+    lidarPoints1.connect(kps);
+  }
 
+  if (sendWindow.pList.size() > 0) {
+    int purpleColor = color(151, 17, 247);
+    sendWindow.display(displayscaleFactor, purpleColor, lidarPoints1);
+    sendWindow.sendPoints();
+  }
 
-          for(KeyPoint pt : kps)
-          {
-               pt.display(displayscaleFactor);
-          }
-
-
-          if(lidarPoints1.available)
-          {    
-               lidarPoints1.show();
-               lidarPoints1.connect(kps);
-          }
-  
-          if(sendWindow.pList.size()>0)
-          {    
-          sendWindow.display(displayscaleFactor, color(151,17,247),lidarPoints1); 
-          sendWindow.sendPoints();  
-          }
 
 
 
@@ -480,6 +453,8 @@ void saveCalibration()
      cVals.setInt("l2y",l2y);
      cVals.setFloat("l2Rot",l2Rot);
      cVals.setFloat("displayscaleFactor",displayscaleFactor);
+     cVals.setInt("minBlobPoints",minBlobPoints);
+     cVals.setInt("maxBlobPoints",maxBlobPoints);
 
      saveJSONObject(cVals, "data/calib.json");
 
@@ -624,152 +599,7 @@ if(mouseButton == LEFT)
 }
 
 
-void createGUI()
-{
-cp5 = new ControlP5(this);
-cp5.setFont(font);
-Group calibration = cp5.addGroup("calibration")
-               .setPosition(0,slPos)
-                .activateEvent(false)
-                .setBarHeight(130)
-                .setBackgroundColor(color(0,0,0,80))
-                .setWidth(sx+300)
-                .setBackgroundHeight(300)
-                .setLabel("calibration")
-                ;
 
-cp5.addSlider("clipPlane")
-     .setPosition(10,slPos)
-     .setSize(sx,slSpacing-1)
-     .setRange(0,20000)
-     .setValue(cVals.getInt("clipPlane"))
-     .setDecimalPrecision(0)
-     .setGroup(calibration)
-     ;
-cp5.addSlider("trackPointJoinDis")
-     .setPosition(10,slPos+=slSpacing)
-     .setSize(sx,slSpacing-1)
-     .setRange(0,300)
-     .setValue(215)
-     .setDecimalPrecision(2)
-     .setGroup(calibration)
-     ;
-cp5.addSlider("persistTolerance")
-     .setPosition(10,slPos+=slSpacing)
-     .setSize(sx,slSpacing-1)
-     .setRange(0,300)
-     .setValue(250)
-     .setDecimalPrecision(2)
-     .setGroup(calibration)
-     ;
-cp5.addSlider("displayscaleFactor")
-     .setPosition(10,slPos+=slSpacing)
-     .setSize(sx,slSpacing-1)
-     .setRange(0.00,0.5)
-     .setValue(cVals.getFloat("displayscaleFactor"))
-     .setDecimalPrecision(2)
-     .setGroup(calibration)
-     ;     
-cp5.addSlider("l1x")
-     .setPosition(10,slPos+=slSpacing)
-     .setSize(sx,slSpacing-1)
-     .setRange(0,15000)
-     .setValue(cVals.getInt("l1x"))
-     .setDecimalPrecision(0)
-     .setGroup(calibration)
-     ;
-cp5.addSlider("l1y")
-     .setPosition(10,slPos+=slSpacing)
-     .setSize(sx,slSpacing-1)
-     .setRange(0,15000)
-     .setValue(cVals.getInt("l1y"))
-     .setDecimalPrecision(0)
-     .setGroup(calibration)
-     ;
-cp5.addSlider("l1Rot")
-     .setPosition(10,slPos+=slSpacing)
-     .setSize(sx,slSpacing-1)
-     .setRange(-360,360)
-     .setValue(cVals.getFloat("l1Rot"))
-     .setDecimalPrecision(1)
-     .setGroup(calibration)
-     ;
-cp5.addSlider("outWinX")
-     .setPosition(10,slPos+=slSpacing)
-     .setSize(sx,slSpacing-1)
-     .setRange(0,4000)
-     .setValue(1920)
-     .setDecimalPrecision(1)
-     .setGroup(calibration)
-     ;
-cp5.addSlider("outWinY")
-     .setPosition(10,slPos+=slSpacing)
-     .setSize(sx,slSpacing-1)
-     .setRange(0,4000)
-     .setValue(1080)
-     .setDecimalPrecision(1)
-     .setGroup(calibration)
-     ;
-/*       
-cp5.addSlider("l2x")
-     .setPosition(10,slPos+=slSpacing)
-     .setSize(sx,slSpacing-1)
-     .setRange(0,15000)
-     .setValue(cVals.getInt("l2x"))
-     .setDecimalPrecision(0)
-     .setGroup(calibration)
-     ;
-cp5.addSlider("l2y")
-     .setPosition(10,slPos+=slSpacing)
-     .setSize(sx,slSpacing-1)
-     .setRange(0,15000)
-     .setValue(cVals.getInt("l2y"))
-     .setDecimalPrecision(0)
-     .setGroup(calibration)
-     ;
-cp5.addSlider("l2Rot")
-     .setPosition(10,slPos+=slSpacing)
-     .setSize(sx,slSpacing-1)
-     .setRange(-360,360)
-     .setValue(cVals.getFloat("l2Rot"))
-     .setDecimalPrecision(1)
-     .setGroup(calibration)
-     ;
-cp5.addSlider("panX")
-     .setPosition(10,slPos+=slSpacing)
-     .setSize(sx,slSpacing-1)
-     .setRange(0,15000)
-     .setValue(0)
-     .setDecimalPrecision(0)
-     .setGroup(calibration)
-     ;
-cp5.addSlider("panY")
-     .setPosition(10,slPos+=slSpacing)
-     .setSize(sx,slSpacing-1)
-     .setRange(0,15000)
-     .setValue(0)
-     .setDecimalPrecision(0)
-     .setGroup(calibration)
-     ;
-cp5.addSlider("ptMin")
-     .setPosition(10,slPos+=slSpacing)
-     .setSize(sx,slSpacing-1)
-     .setRange(0,1000)
-     .setValue(150)
-     .setDecimalPrecision(0)
-     .setGroup(calibration)
-     ;
-cp5.addSlider("superSamp")
-     .setPosition(10,slPos+=slSpacing)
-     .setSize(sx,slSpacing-1)
-     .setRange(1,200)
-     .setValue(1)
-     .setDecimalPrecision(0)
-     .setGroup(calibration)
-     ;
-*/
-
-}
 static final String findLanIp() 
 {
   try {

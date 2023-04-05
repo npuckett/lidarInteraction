@@ -4,7 +4,9 @@
   "l2y": 10000,
   "l2x": 10000,
   "l1y": 2137,
+  "maxBlobPoints": 60,
   "l2Rot": 0,
   "l1Rot": 0.89996337890625,
+  "minBlobPoints": 3,
   "displayscaleFactor": 0.4556249976158142
 }

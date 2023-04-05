@@ -16,6 +16,8 @@ int currentWrite =0;
 int ssCount = 0;
 PointSet ssPoints = new PointSet(0,0, color(0,0,0), 0);
 
+private static final int FILL_COUNT_THRESHOLD = 4;
+
 boolean available = false;
 PointStream(int bufferSize, String prefix, color dCol)
 {
@@ -31,9 +33,52 @@ fillCount=0;
   }
 
 }
+void packagePoints(float ldrAngle, int ldrDistance, int pointNumber, float farClip, int lidarNumber, float ox, float oy, float rAdjust) {
+    // Check if buffers are ready
+    if (buffersReady) {
+        PointSet pointBuffer = activePoints.pts.get(currentWrite);
+        pointBuffer.originX = ox;
+        pointBuffer.originY = oy;
+        pointBuffer.angleAdjust = rAdjust;
+
+        pointBuffer.lidarNumber = lidarNumber;
+        // Check if the point is within the far clip distance
+        if (ldrDistance <= farClip) {
+            LidarPoint bufferPoint = new LidarPoint(ldrAngle + pointBuffer.angleAdjust, ldrDistance, pointBuffer.originX, pointBuffer.originY);
+
+            // Check if the point number is greater than the previous point number or if the buffer is empty
+            if ((pointNumber > prevPoint) || (pointBuffer.ldPoints.size() == 0)) {
+                // Add the point to the current active slot
+                pointBuffer.addPoint(bufferPoint);
+            } else {
+                // Update the current write index, clear it, and add the point
+                updateCurrentWriteIndex(pointBuffer);
+                activePoints.pts.get(currentWrite).addPoint(bufferPoint);
+            }
+
+            prevPoint = pointNumber;
+        }
+    }
+}
+
+
+private void updateCurrentWriteIndex(PointSet pointBuffer) {
+    // Update fill count and set 'available' if the threshold is exceeded
+    fillCount++;
+    if (fillCount > FILL_COUNT_THRESHOLD) {
+        available = true;
+    }
+    // Set the birthday for the current point set
+    pointBuffer.birthday = fillCount;
+
+    // Update the current write index and clear the corresponding PointSet
+    currentWrite = find(0);
+    activePoints.pts.get(currentWrite).ldPoints.clear();
+}
 
 
 
+/*
   void packagePoints(float ldrAngle, int ldrDistance, int pointNumber, float farClip, int lidarNumber, float ox, float oy, float rAdjust)
     {
       if(buffersReady)
@@ -59,7 +104,7 @@ fillCount=0;
                 {
                   //set the birthday for that pointset  
                   fillCount++;
-                  if(fillCount>4){available=true;}
+                  if(fillCount>FILL_COUNT_THRESHOLD){available=true;}
                   pointBuffer.birthday=fillCount;
                   //println(fillCount+"\t"+pointBuffer.ldPoints.size()+"\t"+currentWrite+"\t"+activePoints.pts.size());
 
@@ -83,80 +128,28 @@ fillCount=0;
       }
     }
 
- PointSet getDrawPoints()
- {
-   PointSet testPoints = new PointSet(0,0, color(0,0,0), 0);
-   for(int i=3;i>=0;i--)
-    {
-      try 
-      {
-        testPoints = activePoints.pts.get(find(i));
-        break;
-      } catch (ConcurrentModificationException e) 
-      {
-       println("nope"); 
-      }
-    }
-  return testPoints;
- }
-  
-  void testing()
-  {
-println("********************"+find(2));
-  }
+*/
 
-void superSample(int samples)
-{
-ssCount++;
-ArrayList<LidarPoint> tempPoints = new ArrayList<LidarPoint>();
-if(ssCount<=samples)
-{
-PointSet freshPoints = getDrawPoints();  
-tempPoints = (ArrayList)freshPoints.ldPoints.clone();
-ssPoints.ldPoints.addAll(tempPoints);
-  if(ssCount==samples)
-  {
-    background(255);   
 
-    //sort the list
-    Collections.sort(ssPoints.ldPoints);
-    //draw the list
-    
-        if(ssPoints.ldPoints.size()>0)
-        {
-          if(record)
-          {
-            //folderTarget=("frames/set_"+year()+"_"+month()+"_"+day()+"_"+hour()+"_"+minute()+"_"+second());
-            beginRecord(PDF, ("frames/set_"+year()+"_"+month()+"_"+day()+"_"+hour()+"_"+minute()+"_"+second()+"res_"+samples+"_frame_####.pdf")); 
-          } 
 
-          if(connectDots)
-          {
-          ssPoints.connect(displayscaleFactor,color(0,0,0,50),3);
-          }
+PointSet getDrawPoints() {
+    PointSet newestPointSet = null;
+    Iterator<PointSet> iterator = activePoints.pts.iterator();
 
-          if(showRawPoints)
-            {
-              for(LidarPoint pt : ssPoints.ldPoints)
-              {
-              pt.display(displayscaleFactor,freshPoints.dotColor,false);
-              }  
-            }
-            
-          
-            endRecord();
-            record = false;
-            
+    while (iterator.hasNext()) {
+        PointSet pointSet = iterator.next();
+
+        if (newestPointSet == null || pointSet.birthday > newestPointSet.birthday) {
+            newestPointSet = pointSet;
         }
-        ssPoints.ldPoints.clear();
-    //reset ssCount
-    ssCount = 0;
-  }
+    }
 
+    return newestPointSet != null ? newestPointSet : new PointSet(0, 0, color(0, 0, 0), 0);
 }
 
 
-}
+
+
 
 
   void show()
@@ -304,7 +297,7 @@ if (blobList.size() > 1) {
     //remove blobs with too few points
     for(int i=0;i<blobList.size();i++)
     {
-      if(blobList.get(i).totalPoints<=minimumBlobPoints)
+      if(blobList.get(i).totalPoints<=minBlobPoints)
       {
         blobList.remove(i);
       }

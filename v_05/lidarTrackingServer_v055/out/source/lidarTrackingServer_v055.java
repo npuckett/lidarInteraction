@@ -93,7 +93,7 @@ PrintWriter writeFile;
 float trackPointJoinDis = 100.0f;
 int maxTrackPoints = 60;
 float persistTolerance = 60.0f;
-int minimumBlobPoints = 3;
+int minBlobPoints = 3;
 int maxBlobPoints = 100;
 
 int clipPlane = 5000;
@@ -177,7 +177,7 @@ boolean createWindow = false;
 public void settings()
 {
 size(1800,2000,P2D);
-
+//windowResizable(true);
 
 }
 
@@ -270,101 +270,74 @@ connectClient(LOCAL_IP);
 
 public void draw() 
 {
- 
-//boolean updateCheck = checkRefresh(lastFrame);
+background(255);
 
-        
+  if (menuToggle) {
+    image(controlMenu, width - 200, 0);
+  }
 
-background(255);   
+  showIPinfo();
 
-if(menuToggle)
-{
-image(controlMenu,width-200,0);
+  if (createZone || createIgnore || createSensorZone || createKP || createWindow) {
+    
 
-}
+    String modeText = "";
+    int modeColor = color(0);
 
-showIPinfo();          
-          if(createZone)
-          {
-               stroke(0,255,0);
-               strokeWeight(40);
-               noFill();
-               rectMode(CORNER);
-               rect(0,0,width,height);
+    if (createZone) {
+      modeText = "Create Zone";
+      modeColor = color(0, 255, 0);
+    } else if (createIgnore) {
+      modeText = "Create Ignore Zone";
+      modeColor = color(255, 0, 0);
+    } else if (createSensorZone) {
+      modeText = "Create Sensor Zone";
+      modeColor = color(0, 0, 255);
+    } else if (createKP) {
+      modeText = "Create Key Point";
+      modeColor = color(255, 165, 0);
+    } else if (createWindow) {
+      modeText = "Create Window";
+      modeColor = color(151, 17, 247);
+    }
 
-          }
-          if(createIgnore)
-          {
-               stroke(255,0,0);
-               strokeWeight(40);
-               noFill();
-               rectMode(CORNER);
-               rect(0,0,width,height);
+    stroke(modeColor);
+    strokeWeight(50);
+    noFill();
+    rectMode(CORNER);
+    rect(0, 0, width, height);
+    text(modeText, width / 2, height / 2);
+  }
 
-          }
-          if(createSensorZone)
-          {
-               stroke(0,0,255);
-               strokeWeight(40);
-               noFill();
-               rectMode(CORNER);
-               rect(0,0,width,height);
+  tZone.display(displayscaleFactor, color(0, 255, 0));
+  tZone.sendPoints();
 
-          }
-          if(createKP)
-          {
-               stroke(255,165,0);
-               strokeWeight(40);
-               noFill();
-               rectMode(CORNER);
-               rect(0,0,width,height);
+  int redColor = color(255, 0, 0);
+  for (TrackPoly iz : iZones) {
+    iz.display(displayscaleFactor, redColor);
+  }
 
-          }
-          if(createWindow)
-          {
-               stroke(151,17,247); 
-               noFill();
-               strokeWeight(40);
-               rect(0,0,width,height);
-               if(wPointCount>0)
-               {
-               strokeWeight(1);          
-               rect(winX1,winY1,(mouseX-winX1),(((mouseX-winX1)*outWinY)/outWinX));
-               }
-          }
-          
-          tZone.display(displayscaleFactor, color(0,255,0));
-          tZone.sendPoints();
+  int blueColor = color(0, 0, 255);
+  int blueTransparent = color(0, 0, 255, 50);
+  for (SensorZone sz : sensorZones) {
+    sz.display(displayscaleFactor, blueColor, blueTransparent, lidarPoints1);
+  }
 
-          for(TrackPoly iz : iZones)     
-          {
-          iz.display(displayscaleFactor, color(255,0,0));
-          }
-          for(SensorZone sz : sensorZones)     
-          {
-          sz.display(displayscaleFactor, color(0,0,255),color(0,0,255,50),lidarPoints1);
-          //sz.checkBlobs(lidarPoints1);
-          }
+  for (KeyPoint pt : kps) {
+    pt.display(displayscaleFactor);
+  }
 
+  if (lidarPoints1.available) {
+    lidarPoints1.show();
+    lidarPoints1.connect(kps);
+  }
 
+  if (sendWindow.pList.size() > 0) {
+    int purpleColor = color(151, 17, 247);
+    sendWindow.display(displayscaleFactor, purpleColor, lidarPoints1);
+    sendWindow.sendPoints();
+  }
 
-          for(KeyPoint pt : kps)
-          {
-               pt.display(displayscaleFactor);
-          }
-
-
-          if(lidarPoints1.available)
-          {    
-               lidarPoints1.show();
-               lidarPoints1.connect(kps);
-          }
-  
-          if(sendWindow.pList.size()>0)
-          {    
-          sendWindow.display(displayscaleFactor, color(151,17,247),lidarPoints1); 
-          sendWindow.sendPoints();  
-          }
 
 
 
@@ -515,6 +488,8 @@ public void saveCalibration()
      cVals.setInt("l2y",l2y);
      cVals.setFloat("l2Rot",l2Rot);
      cVals.setFloat("displayscaleFactor",displayscaleFactor);
+     cVals.setInt("minBlobPoints",minBlobPoints);
+     cVals.setInt("maxBlobPoints",maxBlobPoints);
 
      saveJSONObject(cVals, "data/calib.json");
 
@@ -659,6 +634,26 @@ if(mouseButton == LEFT)
 }
 
 
+
+public static final String findLanIp() 
+{
+  try {
+    return InetAddress.getLocalHost().getHostAddress();
+  }
+  catch (final UnknownHostException notFound) {
+    System.err.println("No LAN IP found!");
+    return "";
+  }
+}
+
+public void showIPinfo()
+{
+fill(0);
+textSize(30);
+textAlign(LEFT,BOTTOM);
+text(LOCAL_IP+" : "+broadcastPort,10,height-20);
+
+}
 public void createGUI()
 {
 cp5 = new ControlP5(this);
@@ -689,6 +684,22 @@ cp5.addSlider("trackPointJoinDis")
      .setDecimalPrecision(2)
      .setGroup(calibration)
      ;
+cp5.addSlider("minBlobPoints")
+            .setPosition(10, slPos += slSpacing)
+            .setSize(sx, slSpacing - 1)
+            .setRange(2, 20)
+            .setValue(cVals.getInt("minBlobPoints"))
+            .setDecimalPrecision(1)
+            .setGroup(calibration)
+            ;
+cp5.addSlider("maxBlobPoints")
+            .setPosition(10, slPos += slSpacing)
+            .setSize(sx, slSpacing - 1)
+            .setRange(2, 200)
+            .setValue(cVals.getInt("maxBlobPoints"))
+            .setDecimalPrecision(1)
+            .setGroup(calibration)
+            ;
 cp5.addSlider("persistTolerance")
      .setPosition(10,slPos+=slSpacing)
      .setSize(sx,slSpacing-1)
@@ -745,83 +756,7 @@ cp5.addSlider("outWinY")
      .setDecimalPrecision(1)
      .setGroup(calibration)
      ;
-/*       
-cp5.addSlider("l2x")
-     .setPosition(10,slPos+=slSpacing)
-     .setSize(sx,slSpacing-1)
-     .setRange(0,15000)
-     .setValue(cVals.getInt("l2x"))
-     .setDecimalPrecision(0)
-     .setGroup(calibration)
-     ;
-cp5.addSlider("l2y")
-     .setPosition(10,slPos+=slSpacing)
-     .setSize(sx,slSpacing-1)
-     .setRange(0,15000)
-     .setValue(cVals.getInt("l2y"))
-     .setDecimalPrecision(0)
-     .setGroup(calibration)
-     ;
-cp5.addSlider("l2Rot")
-     .setPosition(10,slPos+=slSpacing)
-     .setSize(sx,slSpacing-1)
-     .setRange(-360,360)
-     .setValue(cVals.getFloat("l2Rot"))
-     .setDecimalPrecision(1)
-     .setGroup(calibration)
-     ;
-cp5.addSlider("panX")
-     .setPosition(10,slPos+=slSpacing)
-     .setSize(sx,slSpacing-1)
-     .setRange(0,15000)
-     .setValue(0)
-     .setDecimalPrecision(0)
-     .setGroup(calibration)
-     ;
-cp5.addSlider("panY")
-     .setPosition(10,slPos+=slSpacing)
-     .setSize(sx,slSpacing-1)
-     .setRange(0,15000)
-     .setValue(0)
-     .setDecimalPrecision(0)
-     .setGroup(calibration)
-     ;
-cp5.addSlider("ptMin")
-     .setPosition(10,slPos+=slSpacing)
-     .setSize(sx,slSpacing-1)
-     .setRange(0,1000)
-     .setValue(150)
-     .setDecimalPrecision(0)
-     .setGroup(calibration)
-     ;
-cp5.addSlider("superSamp")
-     .setPosition(10,slPos+=slSpacing)
-     .setSize(sx,slSpacing-1)
-     .setRange(1,200)
-     .setValue(1)
-     .setDecimalPrecision(0)
-     .setGroup(calibration)
-     ;
-*/
 
-}
-public static final String findLanIp() 
-{
-  try {
-    return InetAddress.getLocalHost().getHostAddress();
-  }
-  catch (final UnknownHostException notFound) {
-    System.err.println("No LAN IP found!");
-    return "";
-  }
-}
-
-public void showIPinfo()
-{
-fill(0);
-textSize(30);
-textAlign(LEFT,BOTTOM);
-text(LOCAL_IP+" : "+broadcastPort,10,height-20);
 
 }
 class KeyPoint
@@ -973,6 +908,8 @@ int currentWrite =0;
 int ssCount = 0;
 PointSet ssPoints = new PointSet(0,0, color(0,0,0), 0);
 
+private static final int FILL_COUNT_THRESHOLD = 4;
+
 boolean available = false;
 PointStream(int bufferSize, String prefix, int dCol)
 {
@@ -988,10 +925,53 @@ fillCount=0;
   }
 
 }
+public void packagePoints(float ldrAngle, int ldrDistance, int pointNumber, float farClip, int lidarNumber, float ox, float oy, float rAdjust) {
+    // Check if buffers are ready
+    if (buffersReady) {
+        PointSet pointBuffer = activePoints.pts.get(currentWrite);
+        pointBuffer.originX = ox;
+        pointBuffer.originY = oy;
+        pointBuffer.angleAdjust = rAdjust;
+
+        pointBuffer.lidarNumber = lidarNumber;
+        // Check if the point is within the far clip distance
+        if (ldrDistance <= farClip) {
+            LidarPoint bufferPoint = new LidarPoint(ldrAngle + pointBuffer.angleAdjust, ldrDistance, pointBuffer.originX, pointBuffer.originY);
+
+            // Check if the point number is greater than the previous point number or if the buffer is empty
+            if ((pointNumber > prevPoint) || (pointBuffer.ldPoints.size() == 0)) {
+                // Add the point to the current active slot
+                pointBuffer.addPoint(bufferPoint);
+            } else {
+                // Update the current write index, clear it, and add the point
+                updateCurrentWriteIndex(pointBuffer);
+                activePoints.pts.get(currentWrite).addPoint(bufferPoint);
+            }
+
+            prevPoint = pointNumber;
+        }
+    }
+}
+
+
+private void updateCurrentWriteIndex(PointSet pointBuffer) {
+    // Update fill count and set 'available' if the threshold is exceeded
+    fillCount++;
+    if (fillCount > FILL_COUNT_THRESHOLD) {
+        available = true;
+    }
+    // Set the birthday for the current point set
+    pointBuffer.birthday = fillCount;
+
+    // Update the current write index and clear the corresponding PointSet
+    currentWrite = find(0);
+    activePoints.pts.get(currentWrite).ldPoints.clear();
+}
 
 
 
-  public void packagePoints(float ldrAngle, int ldrDistance, int pointNumber, float farClip, int lidarNumber, float ox, float oy, float rAdjust)
+/*
+  void packagePoints(float ldrAngle, int ldrDistance, int pointNumber, float farClip, int lidarNumber, float ox, float oy, float rAdjust)
     {
       if(buffersReady)
       { 
@@ -1016,7 +996,7 @@ fillCount=0;
                 {
                   //set the birthday for that pointset  
                   fillCount++;
-                  if(fillCount>4){available=true;}
+                  if(fillCount>FILL_COUNT_THRESHOLD){available=true;}
                   pointBuffer.birthday=fillCount;
                   //println(fillCount+"\t"+pointBuffer.ldPoints.size()+"\t"+currentWrite+"\t"+activePoints.pts.size());
 
@@ -1040,80 +1020,28 @@ fillCount=0;
       }
     }
 
- public PointSet getDrawPoints()
- {
-   PointSet testPoints = new PointSet(0,0, color(0,0,0), 0);
-   for(int i=3;i>=0;i--)
-    {
-      try 
-      {
-        testPoints = activePoints.pts.get(find(i));
-        break;
-      } catch (ConcurrentModificationException e) 
-      {
-       println("nope"); 
-      }
-    }
-  return testPoints;
- }
-  
-  public void testing()
-  {
-println("********************"+find(2));
-  }
+*/
 
-public void superSample(int samples)
-{
-ssCount++;
-ArrayList<LidarPoint> tempPoints = new ArrayList<LidarPoint>();
-if(ssCount<=samples)
-{
-PointSet freshPoints = getDrawPoints();  
-tempPoints = (ArrayList)freshPoints.ldPoints.clone();
-ssPoints.ldPoints.addAll(tempPoints);
-  if(ssCount==samples)
-  {
-    background(255);   
 
-    //sort the list
-    Collections.sort(ssPoints.ldPoints);
-    //draw the list
-    
-        if(ssPoints.ldPoints.size()>0)
-        {
-          if(record)
-          {
-            //folderTarget=("frames/set_"+year()+"_"+month()+"_"+day()+"_"+hour()+"_"+minute()+"_"+second());
-            beginRecord(PDF, ("frames/set_"+year()+"_"+month()+"_"+day()+"_"+hour()+"_"+minute()+"_"+second()+"res_"+samples+"_frame_####.pdf")); 
-          } 
 
-          if(connectDots)
-          {
-          ssPoints.connect(displayscaleFactor,color(0,0,0,50),3);
-          }
+public PointSet getDrawPoints() {
+    PointSet newestPointSet = null;
+    Iterator<PointSet> iterator = activePoints.pts.iterator();
 
-          if(showRawPoints)
-            {
-              for(LidarPoint pt : ssPoints.ldPoints)
-              {
-              pt.display(displayscaleFactor,freshPoints.dotColor,false);
-              }  
-            }
-            
-          
-            endRecord();
-            record = false;
-            
+    while (iterator.hasNext()) {
+        PointSet pointSet = iterator.next();
+
+        if (newestPointSet == null || pointSet.birthday > newestPointSet.birthday) {
+            newestPointSet = pointSet;
         }
-        ssPoints.ldPoints.clear();
-    //reset ssCount
-    ssCount = 0;
-  }
+    }
 
+    return newestPointSet != null ? newestPointSet : new PointSet(0, 0, color(0, 0, 0), 0);
 }
 
 
-}
+
+
 
 
   public void show()
@@ -1261,7 +1189,7 @@ if (blobList.size() > 1) {
     //remove blobs with too few points
     for(int i=0;i<blobList.size();i++)
     {
-      if(blobList.get(i).totalPoints<=minimumBlobPoints)
+      if(blobList.get(i).totalPoints<=minBlobPoints)
       {
         blobList.remove(i);
       }
