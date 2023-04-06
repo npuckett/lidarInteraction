@@ -347,9 +347,24 @@ void connect(ArrayList<KeyPoint> kp)
           }
         lidarFeed1.send(ksData,broadcastList);  
      }
+ /*   
+    OscMessage sensorArea = new OscMessage("/sensorZones/"+sNumber);
+    sensorArea.add(population); //0
+
+    for(int bNums : currentMembers)
+    {
+        sensorArea.add(bNums);
+    }
+
+    // Add x/y positions of each point in the sensor zone
+    for (PolyPoint p : pList)
+    {
+        sensorArea.add(p.worldX);
+        sensorArea.add(p.worldY);
+    }
     
-
-
+    lidarFeed1.send(sensorArea,broadcastList);
+*/
 }
 
     int find(int ageRank)

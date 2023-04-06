@@ -1138,10 +1138,7 @@ public PointSet getDrawPoints() {
               
               float relX = map((pixelX-wpX1),0,(wpX2-wpX1),0,outSizeX);
               float relY = map((pixelY-wpY1),0,(wpY2-wpY1),0,outSizeY);
-              //blobData.add(relX);
-              //blobData.add(relY);
               
-              //println(relX+"   "+relY);
               }
               lidarFeed1.send(blobData,broadcastList);
               
@@ -1285,7 +1282,22 @@ public void connect(ArrayList<KeyPoint> kp)
         lidarFeed1.send(ksData,broadcastList);  
      }
     
+    OscMessage sensorArea = new OscMessage("/sensorZones/"+sNumber);
+    sensorArea.add(population); //0
 
+    for(int bNums : currentMembers)
+    {
+        sensorArea.add(bNums);
+    }
+
+    // Add x/y positions of each point in the sensor zone
+    for (PolyPoint p : pList)
+    {
+        sensorArea.add(p.worldX);
+        sensorArea.add(p.worldY);
+    }
+    
+    lidarFeed1.send(sensorArea,broadcastList);
 
 }
 
