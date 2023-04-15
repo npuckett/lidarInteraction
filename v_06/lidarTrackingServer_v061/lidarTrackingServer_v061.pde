@@ -113,7 +113,9 @@ int blobID = 0;
 PointStream lidarPoints1 = new PointStream(4,"/lidar1",color(255,0,0));
 
 PFont p;
+PFont p2;
 ControlFont font;
+ControlFont smallfont;
 int slPos=25;
 int slSpacing = 25;
 
@@ -146,6 +148,10 @@ void setup()
 controlMenu = loadImage("menuControls.png");
 p = createFont("Verdana",20); 
 font = new ControlFont(p);
+
+p2 = createFont("Verdana",12);
+smallfont = new ControlFont(p2);
+
 //frameRate(12);
 cVals = loadJSONObject("calib.json");
 ///OSC properties lidar input port
@@ -311,7 +317,7 @@ background(255);
 void mousePressed()
 {
 
-if(mouseButton == LEFT)
+if(mouseButton == RIGHT)
 {
      if(createZone)
      {

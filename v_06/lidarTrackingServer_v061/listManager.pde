@@ -1,3 +1,18 @@
+class LidarData {
+  String oscAddress;
+  color pointColor;
+  float ox;
+  float oy;
+  float rAdjust;
+
+  LidarData(String oscAddress, color pointColor, float ox, float oy, float rAdjust) {
+    this.oscAddress = oscAddress;
+    this.pointColor = pointColor;
+    this.ox = ox;
+    this.oy = oy;
+    this.rAdjust = rAdjust;
+  }
+}
 class PointStream
 {
 int totalFeeds;
@@ -78,57 +93,7 @@ private void updateCurrentWriteIndex(PointSet pointBuffer) {
 
 
 
-/*
-  void packagePoints(float ldrAngle, int ldrDistance, int pointNumber, float farClip, int lidarNumber, float ox, float oy, float rAdjust)
-    {
-      if(buffersReady)
-      { 
-      PointSet pointBuffer = activePoints.pts.get(currentWrite);
-      pointBuffer.originX = ox;
-      pointBuffer.originY = oy;
-      pointBuffer.angleAdjust = rAdjust;
-    
-      pointBuffer.lidarNumber = lidarNumber;  
-          if(ldrDistance<=farClip)
-          {
-             
-              LidarPoint bufferPoint = new LidarPoint(ldrAngle+pointBuffer.angleAdjust,ldrDistance,pointBuffer.originX,pointBuffer.originY);
 
-              
-                if((pointNumber>prevPoint)||(pointBuffer.ldPoints.size()==0))
-                {
-                  //add the point to the current active slot
-                  pointBuffer.addPoint(bufferPoint);
-                }
-                else
-                {
-                  //set the birthday for that pointset  
-                  fillCount++;
-                  if(fillCount>FILL_COUNT_THRESHOLD){available=true;}
-                  pointBuffer.birthday=fillCount;
-                  //println(fillCount+"\t"+pointBuffer.ldPoints.size()+"\t"+currentWrite+"\t"+activePoints.pts.size());
-
-                  //find the new target, clear it, add the point
-                  currentWrite=find(0);
-                  //
-                  //println("** "+currentWrite);
-                  activePoints.pts.get(currentWrite).ldPoints.clear();
-                  activePoints.pts.get(currentWrite).addPoint(bufferPoint);
-                }
-
-                    
-              prevPoint=pointNumber;
-
-          }
-      }
-
-      else
-      {
-        print("..");
-      }
-    }
-
-*/
 
 
 
@@ -347,26 +312,8 @@ void connect(ArrayList<KeyPoint> kp)
           }
         lidarFeed1.send(ksData,broadcastList);  
      }
- /*   
-    OscMessage sensorArea = new OscMessage("/sensorZones/"+sNumber);
-    sensorArea.add(population); //0
 
-    for(int bNums : currentMembers)
-    {
-        sensorArea.add(bNums);
-    }
-
-    // Add x/y positions of each point in the sensor zone
-    for (PolyPoint p : pList)
-    {
-        sensorArea.add(p.worldX);
-        sensorArea.add(p.worldY);
-    }
-    
-    lidarFeed1.send(sensorArea,broadcastList);
-*/
 }
-
     int find(int ageRank)
     {
       int returnIndex =0; 
@@ -391,6 +338,8 @@ void connect(ArrayList<KeyPoint> kp)
 
 
     }
+
+
 
 }
 

@@ -36,8 +36,7 @@ Nomen nameGenerator = new Nomen();
     boolean drawVelocity = true;
 
 
-// KalmanFilter object
-  KalmanFilter kalmanFilter;
+
 
 
 TrackBlob()
@@ -56,34 +55,6 @@ velocityVec = new PVector(0,0);
 
 
 
-// initialize KalmanFilter
-    int stateSize = 4; // x, y, vx, vy
-    int measurementSize = 2; // x, y
-    kalmanFilter = new KalmanFilter(stateSize, measurementSize);
- // set initial values for KalmanFilter matrices
-    float dt = 1.0 / frameRate;
-    float accNoise = 0.1f;
-    float measNoise = 5.0f;
-    kalmanFilter.setF(new SimpleMatrix(new double[][] {
-      {1, 0, dt, 0},
-      {0, 1, 0, dt},
-      {0, 0, 1, 0},
-      {0, 0, 0, 1}
-    }));
-    kalmanFilter.setQ(new SimpleMatrix(new double[][] {
-      {Math.pow(dt, 4) / 4, 0, Math.pow(dt, 3) / 2, 0},
-      {0, Math.pow(dt, 4) / 4, 0, Math.pow(dt, 3) / 2},
-      {Math.pow(dt, 3) / 2, 0, Math.pow(dt, 2), 0},
-      {0, Math.pow(dt, 3) / 2, 0, Math.pow(dt, 2)}
-    }).scale(accNoise));
-    kalmanFilter.setH(new SimpleMatrix(new double[][] {
-      {1, 0, 0, 0},
-      {0, 1, 0, 0}
-    }));
-    kalmanFilter.setR(new SimpleMatrix(new double[][] {
-      {Math.pow(measNoise, 2), 0},
-      {0, Math.pow(measNoise, 2)}
-    }));
 
 
 }
@@ -228,70 +199,11 @@ void drawVelocityArrow(Point2D currentPoint, Point2D previousPoint, float distan
     PVector direction = new PVector((float) (currentPoint.getX() - previousPoint.getX()), (float) (currentPoint.getY() - previousPoint.getY()));
     float arrowAngle = degrees(direction.heading());
 
-    println(arrowAngle);
+    //println(arrowAngle);
 
 }
 
 
 }
 
-
-public class KalmanFilter {
-  
-  private SimpleMatrix x; // state estimate
-  private SimpleMatrix P; // error covariance
-  private SimpleMatrix F; // state transition matrix
-  private SimpleMatrix Q; // process noise covariance
-  private SimpleMatrix H; // measurement matrix
-  private SimpleMatrix R; // measurement noise covariance
-
-  public KalmanFilter(int stateSize, int measurementSize) {
-    x = new SimpleMatrix(stateSize, 1);
-    P = SimpleMatrix.identity(stateSize);
-    F = SimpleMatrix.identity(stateSize);
-    Q = SimpleMatrix.identity(stateSize);
-    H = new SimpleMatrix(measurementSize, stateSize);
-    R = SimpleMatrix.identity(measurementSize);
-  }
-
-  public void setF(SimpleMatrix F) {
-    this.F = F;
-  }
-
-  public void setQ(SimpleMatrix Q) {
-    this.Q = Q;
-  }
-
-  public void setH(SimpleMatrix H) {
-    this.H = H;
-  }
-
-  public void setR(SimpleMatrix R) {
-    this.R = R;
-  }
-
-  public SimpleMatrix getState() {
-    return x;
-  }
-
-  public void setState(SimpleMatrix x) {
-    this.x = x;
-  }
-
-  public SimpleMatrix predict() {
-    x = F.mult(x);
-    P = F.mult(P).mult(F.transpose()).plus(Q);
-    return x;
-  }
-
-  public SimpleMatrix correct(SimpleMatrix z) {
-    SimpleMatrix y = z.minus(H.mult(x));
-    SimpleMatrix S = H.mult(P).mult(H.transpose()).plus(R);
-    SimpleMatrix K = P.mult(H.transpose().mult(S.invert()));
-    x = x.plus(K.mult(y));
-    P = SimpleMatrix.identity(x.numRows()).minus(K.mult(H)).mult(P);
-    return x;
-  }
-  
-}
 
