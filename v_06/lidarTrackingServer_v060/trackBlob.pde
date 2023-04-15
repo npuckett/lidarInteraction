@@ -24,8 +24,21 @@ float velocity;
 double lastUpdate;
 float distanceTraveled;
 float life;
+boolean drawLabel = true;
+int labelSize = 10;
 
 Nomen nameGenerator = new Nomen();
+
+// new variables for velocity
+  
+  float velocityMagnitude;
+  PVector velocityVec; // new variable to store the velocity vector
+    boolean drawVelocity = true;
+
+
+// KalmanFilter object
+  KalmanFilter kalmanFilter;
+
 
 TrackBlob()
 {
@@ -38,31 +51,100 @@ totalPoints =0;
 name = nameGenerator.animal().get();
 birthDay = millis();
 
+velocityVec = new PVector(0,0);
+    velocityMagnitude = 0;
+
+
+
+// initialize KalmanFilter
+    int stateSize = 4; // x, y, vx, vy
+    int measurementSize = 2; // x, y
+    kalmanFilter = new KalmanFilter(stateSize, measurementSize);
+ // set initial values for KalmanFilter matrices
+    float dt = 1.0 / frameRate;
+    float accNoise = 0.1f;
+    float measNoise = 5.0f;
+    kalmanFilter.setF(new SimpleMatrix(new double[][] {
+      {1, 0, dt, 0},
+      {0, 1, 0, dt},
+      {0, 0, 1, 0},
+      {0, 0, 0, 1}
+    }));
+    kalmanFilter.setQ(new SimpleMatrix(new double[][] {
+      {Math.pow(dt, 4) / 4, 0, Math.pow(dt, 3) / 2, 0},
+      {0, Math.pow(dt, 4) / 4, 0, Math.pow(dt, 3) / 2},
+      {Math.pow(dt, 3) / 2, 0, Math.pow(dt, 2), 0},
+      {0, Math.pow(dt, 3) / 2, 0, Math.pow(dt, 2)}
+    }).scale(accNoise));
+    kalmanFilter.setH(new SimpleMatrix(new double[][] {
+      {1, 0, 0, 0},
+      {0, 1, 0, 0}
+    }));
+    kalmanFilter.setR(new SimpleMatrix(new double[][] {
+      {Math.pow(measNoise, 2), 0},
+      {0, Math.pow(measNoise, 2)}
+    }));
+
+
 }
 
-public void addPoint(LidarPoint blPt)
-{
+public void predict() {
+    kalmanFilter.predict();
+}
+
+public void correct(Point2D measurement) {
+    SimpleMatrix z = new SimpleMatrix(2, 1);
+    z.set(0, 0, measurement.getX());
+    z.set(1, 0, measurement.getY());
+    kalmanFilter.correct(z);
+    Point2D newCenter = new Point2D.Double(kalmanFilter.getState().get(0), kalmanFilter.getState().get(1));
+    setLocation(newCenter);
+}
+
+public void setLocation(Point2D location) {
+    center = location;
+}
+
+void addPoint(LidarPoint blPt) {
     blobPoints.add(blPt);
     allPoints.append(new Ellipse2D.Double(blPt.world.getX(),blPt.world.getY(),1,1),true);
     totalPoints++;
 
     boundingBox = allPoints.getBounds2D();
     center = new Point2D.Double(boundingBox.getCenterX(),boundingBox.getCenterY());
-    locationHistory.set(0,center);
-    
+    locationHistory.add(0, center);  // add new position to the beginning of the list
+ 
+    if (locationHistory.size() > 2) {
+      locationHistory.remove(locationHistory.size() - 1);  // remove the oldest position
 
+    }
+   
 }
+
 
 void display(float drawScale, boolean drawPoints, boolean drawBox, boolean drawHistory, color fColor)
 {
+
+
 life = (millis()-birthDay)/1000.0;
+
+
 if(locationHistory.size()>1)
 {
-    //velocity=(float)(locationHistory.get(1).distance(locationHistory.get(0)));///(millis()-lastUpdate));
-    //println(velocity);
-    distanceTraveled = calcDistance(locationHistory)/1000;
     
+    
+
+    if (locationHistory.size() > 1 && drawVelocity) {
+    Point2D currentPoint = locationHistory.get(0);
+    Point2D previousPoint = locationHistory.get(1);
+    drawVelocityArrow(currentPoint, previousPoint, 2, 200, drawScale, fColor);
+
+    distanceTraveled = calcDistance(locationHistory)/1000;  
     velocity = distanceTraveled/life;
+  }
+
+
+
 }
 
 
@@ -78,6 +160,9 @@ rect((float)boundingBox.getX()*drawScale,(float)boundingBox.getY()*drawScale,(fl
 //noStroke();
 noFill();
 ellipse((float)center.getX()*drawScale,(float)center.getY()*drawScale,10,10);
+
+if(drawLabel)
+{
 fill(fColor);
     textSize(22);
     textAlign(CENTER,CENTER);
@@ -87,7 +172,7 @@ fill(fColor);
     textSize(30);
     text("active time: "+roundTo(life,1)+" / Metres: "+roundTo(distanceTraveled,2),(float)center.getX()*drawScale,((float)center.getY()*drawScale)+35);
     //text(distanceTraveled+" "+life+" "+velocity,(float)center.getX()*drawScale,((float)center.getY()*drawScale)+60);
-
+}
 if(drawHistory)
 {
     stroke(fColor);
@@ -137,21 +222,76 @@ void assignID()
 }
 
 
+void drawVelocityArrow(Point2D currentPoint, Point2D previousPoint, float distanceThreshold, float arrowSize, float drawScale, int arrowColor) {
+  float distance = (float) currentPoint.distance(previousPoint);
+  
+    PVector direction = new PVector((float) (currentPoint.getX() - previousPoint.getX()), (float) (currentPoint.getY() - previousPoint.getY()));
+    float arrowAngle = degrees(direction.heading());
 
+    println(arrowAngle);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+}
 
 
 }
+
+
+public class KalmanFilter {
+  
+  private SimpleMatrix x; // state estimate
+  private SimpleMatrix P; // error covariance
+  private SimpleMatrix F; // state transition matrix
+  private SimpleMatrix Q; // process noise covariance
+  private SimpleMatrix H; // measurement matrix
+  private SimpleMatrix R; // measurement noise covariance
+
+  public KalmanFilter(int stateSize, int measurementSize) {
+    x = new SimpleMatrix(stateSize, 1);
+    P = SimpleMatrix.identity(stateSize);
+    F = SimpleMatrix.identity(stateSize);
+    Q = SimpleMatrix.identity(stateSize);
+    H = new SimpleMatrix(measurementSize, stateSize);
+    R = SimpleMatrix.identity(measurementSize);
+  }
+
+  public void setF(SimpleMatrix F) {
+    this.F = F;
+  }
+
+  public void setQ(SimpleMatrix Q) {
+    this.Q = Q;
+  }
+
+  public void setH(SimpleMatrix H) {
+    this.H = H;
+  }
+
+  public void setR(SimpleMatrix R) {
+    this.R = R;
+  }
+
+  public SimpleMatrix getState() {
+    return x;
+  }
+
+  public void setState(SimpleMatrix x) {
+    this.x = x;
+  }
+
+  public SimpleMatrix predict() {
+    x = F.mult(x);
+    P = F.mult(P).mult(F.transpose()).plus(Q);
+    return x;
+  }
+
+  public SimpleMatrix correct(SimpleMatrix z) {
+    SimpleMatrix y = z.minus(H.mult(x));
+    SimpleMatrix S = H.mult(P).mult(H.transpose()).plus(R);
+    SimpleMatrix K = P.mult(H.transpose().mult(S.invert()));
+    x = x.plus(K.mult(y));
+    P = SimpleMatrix.identity(x.numRows()).minus(K.mult(H)).mult(P);
+    return x;
+  }
+  
+}
+
